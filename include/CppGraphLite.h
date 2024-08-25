@@ -1,9 +1,9 @@
 ﻿#pragma once
 #include "CppGraphLiteTypeTraits.h"
 #include <unordered_map>
+#include <unordered_set>
 #include <map>
 #include <set>
-#include <unordered_set>
 #include <type_traits>
 
 namespace graphlite
@@ -30,13 +30,12 @@ namespace graphlite
 			std::map<VertexType, size_t>>;
 
 	public:
-
 		void insert(VertexType&& vertex)
 		{
-			if (m_adjacencyList.insert(vertex, {}).second)
+			if (m_adjacencyList.insert({ vertex, {} }).second)
 			{
-				m_inDegree.insert(vertex, 0);
-				m_outDegree.insert(std::forward<VertexType>(vertex), 0);
+				m_inDegree.insert({ vertex, 0 });
+				m_outDegree.insert({ std::forward<VertexType>(vertex), 0 });
 			}
 		}
 
@@ -114,12 +113,12 @@ namespace graphlite
 		{
 			if (!m_adjacencyList.contains(to))
 			{
-				if (!m_adjacencyList.insert(to, {}).second)
+				if (!m_adjacencyList.insert({ to, {} }).second)
 					return;
 				else
 				{
-					m_inDegree.insert(to, 0);
-					m_outDegree.insert(to, 0);
+					m_inDegree.insert({ to, 0 });
+					m_outDegree.insert({ to, 0 });
 				}
 			}
 
@@ -133,7 +132,7 @@ namespace graphlite
 			}
 			else
 			{
-				if (m_adjacencyList.insert(from, { to }).second)
+				if (m_adjacencyList.insert({ from, { to } }).second)
 				{
 					m_outDegree[std::forward<VertexType>(from)]++;
 					m_inDegree[std::forward<VertexType>(to)]++;

@@ -466,3 +466,6 @@ bin/*
 test/test_runner
 
 out/*
+
+/vcpkg.json
+/vcpkg-configuration.json

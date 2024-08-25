@@ -3,12 +3,16 @@
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+add_subdirectory (test)
+enable_testing()
+add_test (NAME CppGraphLiteTest COMMAND Test)
+
 add_library(${PROJECT_NAME} STATIC)
 
 target_sources(${PROJECT_NAME}
     PRIVATE
-       "src/CppGraphLite.cpp"
- "src/CppGraphLiteTypeTraits.h")
+        "src/CppGraphLite.cpp"
+        "include/CppGraphLiteTypeTraits.h")
 
 target_include_directories(${PROJECT_NAME}
     PRIVATE
