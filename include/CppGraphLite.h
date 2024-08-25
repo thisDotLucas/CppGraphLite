@@ -30,30 +30,39 @@ namespace graphlite
 			std::map<VertexType, size_t>>;
 
 	public:
-		void insert(VertexType&& vertex)
+		template <typename _VertexType> // Universal/forwarding reference
+		void insert(_VertexType&& vertex)
 		{
+			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+
 			if (m_adjacencyList.insert({ vertex, {} }).second)
 			{
 				m_inDegree.insert({ vertex, 0 });
-				m_outDegree.insert({ std::forward<VertexType>(vertex), 0 });
+				m_outDegree.insert({ std::forward<_VertexType>(vertex), 0 });
 			}
 		}
 
-		void insert(VertexType&& from, VertexType&& to)
+		template <typename _VertexType>
+		void insert(_VertexType&& from, _VertexType&& to)
 		{
+			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+
 			if constexpr (edgeType == EdgeType::Directed)
 			{
-				_insert(std::forward<VertexType>(from), std::forward<VertexType>(to));
+				_insert(std::forward<_VertexType>(from), std::forward<_VertexType>(to));
 			}
 			else
 			{
 				_insert(from, to);
-				_insert(std::forward<VertexType>(to), std::forward<VertexType>(from));
+				_insert(std::forward<_VertexType>(to), std::forward<_VertexType>(from));
 			}
 		}
 
-		void erase(VertexType&& vertex)
+		template <typename _VertexType>
+		void erase(_VertexType&& vertex)
 		{
+			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+
 			if (!m_adjacencyList.contains(vertex))
 				return;
 
@@ -65,14 +74,17 @@ namespace graphlite
 
 			m_inDegree.erase(vertex);
 			m_outDegree.erase(vertex);
-			m_adjacencyList.erase(std::forward<VertexType>(vertex));
+			m_adjacencyList.erase(std::forward<_VertexType>(vertex));
 		}
 
-		[[nodiscard]] EdgeListType edges(VertexType&& vertex) const const&
+		template <typename _VertexType>
+		[[nodiscard]] EdgeListType edges(_VertexType&& vertex) const const&
 		{
+			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+
 			if (m_adjacencyList.contains(vertex))
 			{
-				return m_adjacencyList[std::forward<VertexType>(vertex)];
+				return m_adjacencyList[std::forward<_VertexType>(vertex)];
 			}
 			else
 			{
@@ -80,11 +92,14 @@ namespace graphlite
 			}
 		}
 
-		[[nodiscard]] EdgeListType&& edges(VertexType&& vertex) &&
+		template <typename _VertexType>
+		[[nodiscard]] EdgeListType&& edges(_VertexType&& vertex) &&
 		{
+			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+
 			if (m_adjacencyList.contains(vertex))
 			{
-				return std::move(m_adjacencyList[std::forward<VertexType>(vertex)]);
+				return std::move(m_adjacencyList[std::forward<_VertexType>(vertex)]);
 			}
 			else
 			{
@@ -97,20 +112,28 @@ namespace graphlite
 			return m_adjacencyList.size();
 		}
 
-		[[nodiscard]] size_t inDegree(VertexType&& vertex)
+		template <typename _VertexType>
+		[[nodiscard]] size_t inDegree(_VertexType&& vertex)
 		{
-			return m_inDegree[std::forward<VertexType>(vertex)];
+			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+
+			return m_inDegree[std::forward<_VertexType>(vertex)];
 		}
 
-		[[nodiscard]] size_t outDegree(VertexType&& vertex)
+		template <typename _VertexType>
+		[[nodiscard]] size_t outDegree(_VertexType&& vertex)
 		{
-			return m_outDegree[std::forward<VertexType>(vertex)];
+			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+
+			return m_outDegree[std::forward<_VertexType>(vertex)];
 		}
 
 	private:
-
-		void _insert(VertexType&& from, VertexType&& to)
+		template <typename _VertexType>
+		void _insert(_VertexType&& from, _VertexType&& to)
 		{
+			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+
 			if (!m_adjacencyList.contains(to))
 			{
 				if (!m_adjacencyList.insert({ to, {} }).second)
@@ -126,16 +149,16 @@ namespace graphlite
 			{
 				if (m_adjacencyList[from].insert(to).second)
 				{
-					m_outDegree[std::forward<VertexType>(from)]++;
-					m_inDegree[std::forward<VertexType>(to)]++;
+					m_outDegree[std::forward<_VertexType>(from)]++;
+					m_inDegree[std::forward<_VertexType>(to)]++;
 				}
 			}
 			else
 			{
 				if (m_adjacencyList.insert({ from, { to } }).second)
 				{
-					m_outDegree[std::forward<VertexType>(from)]++;
-					m_inDegree[std::forward<VertexType>(to)]++;
+					m_outDegree[std::forward<_VertexType>(from)]++;
+					m_inDegree[std::forward<_VertexType>(to)]++;
 				}
 			}
 		}
