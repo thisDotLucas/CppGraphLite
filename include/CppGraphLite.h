@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "CppGraphLiteTypeTraits.h"
 #include <unordered_map>
 #include <map>
 #include <set>
@@ -7,17 +8,22 @@
 
 namespace graphlite
 {
-	enum class GraphType
+	enum class EdgeType
 	{
 		Directed,
 		Undirected
 	};
 
-	template <typename VertexType, GraphType graphType>
+	template <typename VertexType, EdgeType graphType>
 	class Graph
 	{
-		using EdgeListType = std::unordered_set<VertexType>;
-		using AdjacencyListType = std::unordered_map<VertexType, EdgeListType>;
+		using EdgeListType = std::conditional_t<details::Hashable<VertexType>,
+			std::unordered_set<VertexType>,
+			std::set<VertexType>>;
+
+		using AdjacencyListType = std::conditional_t<details::Hashable<VertexType>,
+			std::unordered_map<VertexType, EdgeListType>,
+			std::map<VertexType, EdgeListType>>;
 
 	public:
 
@@ -28,7 +34,7 @@ namespace graphlite
 
 		void insert(VertexType&& from, VertexType&& to)
 		{
-			if constexpr (graphType == GraphType::Directed)
+			if constexpr (graphType == EdgeType::Directed)
 			{
 				_insert(std::forward<VertexType>(from), std::forward<VertexType>(to));
 			}
