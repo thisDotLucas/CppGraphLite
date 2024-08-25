@@ -14,7 +14,7 @@ namespace graphlite
 		Undirected
 	};
 
-	template <typename VertexType, EdgeType graphType>
+	template <typename VertexType, EdgeType edgeType>
 	class Graph
 	{
 		using EdgeListType = std::conditional_t<details::Hashable<VertexType>,
@@ -25,16 +25,24 @@ namespace graphlite
 			std::unordered_map<VertexType, EdgeListType>,
 			std::map<VertexType, EdgeListType>>;
 
+		using DegreeStructureType = std::conditional_t<details::Hashable<VertexType>,
+			std::unordered_map<VertexType, size_t>,
+			std::map<VertexType, size_t>>;
+
 	public:
 
 		void insert(VertexType&& vertex)
 		{
-			m_adjacencyList.insert(std::forward<VertexType>(vertex), {});
+			if (m_adjacencyList.insert(vertex, {}).second)
+			{
+				m_inDegree.insert(vertex, 0);
+				m_outDegree.insert(std::forward<VertexType>(vertex), 0);
+			}
 		}
 
 		void insert(VertexType&& from, VertexType&& to)
 		{
-			if constexpr (graphType == EdgeType::Directed)
+			if constexpr (edgeType == EdgeType::Directed)
 			{
 				_insert(std::forward<VertexType>(from), std::forward<VertexType>(to));
 			}
@@ -50,15 +58,18 @@ namespace graphlite
 			if (!m_adjacencyList.contains(vertex))
 				return;
 
-			for (auto& [_, edges] : m_adjacencyList)
+			for (auto& [vertex, edges] : m_adjacencyList)
 			{
-				edges.erase(vertex);
+				if (edges.erase(vertex) != std::end(edges))
+					m_outDegree[vertex]--;
 			}
 
+			m_inDegree.erase(vertex);
+			m_outDegree.erase(vertex);
 			m_adjacencyList.erase(std::forward<VertexType>(vertex));
 		}
 
-		EdgeListType edges(VertexType&& vertex) const&
+		[[nodiscard]] EdgeListType edges(VertexType&& vertex) const const&
 		{
 			if (m_adjacencyList.contains(vertex))
 			{
@@ -70,7 +81,7 @@ namespace graphlite
 			}
 		}
 
-		EdgeListType&& edges(VertexType&& vertex) &&
+		[[nodiscard]] EdgeListType&& edges(VertexType&& vertex) &&
 		{
 			if (m_adjacencyList.contains(vertex))
 			{
@@ -82,26 +93,57 @@ namespace graphlite
 			}
 		}
 
-		size_t size() const
+		[[nodiscard]] size_t size() const
 		{
 			return m_adjacencyList.size();
+		}
+
+		[[nodiscard]] size_t inDegree(VertexType&& vertex)
+		{
+			return m_inDegree[std::forward<VertexType>(vertex)];
+		}
+
+		[[nodiscard]] size_t outDegree(VertexType&& vertex)
+		{
+			return m_outDegree[std::forward<VertexType>(vertex)];
 		}
 
 	private:
 
 		void _insert(VertexType&& from, VertexType&& to)
 		{
+			if (!m_adjacencyList.contains(to))
+			{
+				if (!m_adjacencyList.insert(to, {}).second)
+					return;
+				else
+				{
+					m_inDegree.insert(to, 0);
+					m_outDegree.insert(to, 0);
+				}
+			}
+
 			if (m_adjacencyList.contains(from))
 			{
-				m_adjacencyList[std::forward<VertexType>(from)].push_back(std::forward<VertexType>(to));
+				if (m_adjacencyList[from].insert(to).second)
+				{
+					m_outDegree[std::forward<VertexType>(from)]++;
+					m_inDegree[std::forward<VertexType>(to)]++;
+				}
 			}
 			else
 			{
-				m_adjacencyList.insert(std::forward<VertexType>(from), { std::forward<VertexType>(to) });
+				if (m_adjacencyList.insert(from, { to }).second)
+				{
+					m_outDegree[std::forward<VertexType>(from)]++;
+					m_inDegree[std::forward<VertexType>(to)]++;
+				}
 			}
 		}
 
 		AdjacencyListType m_adjacencyList;
+		DegreeStructureType m_inDegree;
+		DegreeStructureType m_outDegree;
 	};
 }
 
