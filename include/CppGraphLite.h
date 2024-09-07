@@ -17,6 +17,7 @@ namespace graphlite
 	template <typename VertexType, EdgeType edgeType>
 	class Graph
 	{
+	public:
 		using EdgeListType = std::conditional_t<details::Hashable<VertexType>,
 			std::unordered_set<VertexType>,
 			std::set<VertexType>>;
@@ -29,7 +30,6 @@ namespace graphlite
 			std::unordered_map<VertexType, size_t>,
 			std::map<VertexType, size_t>>;
 
-	public:
 		template <typename _VertexType> // Universal/forwarding reference
 		void insert(_VertexType&& vertex)
 		{
@@ -167,5 +167,14 @@ namespace graphlite
 		DegreeStructureType m_inDegree;
 		DegreeStructureType m_outDegree;
 	};
+
+	static_assert(std::same_as<Graph<int, EdgeType::Directed>::AdjacencyListType,
+		std::unordered_map<int, std::unordered_set<int>>>);
+
+	static_assert(std::same_as<Graph<int, EdgeType::Directed>::EdgeListType,
+		std::unordered_set<int>>);
+
+	static_assert(std::same_as<Graph<int, EdgeType::Directed>::DegreeStructureType,
+		std::unordered_map<int, size_t>>);
 }
 
