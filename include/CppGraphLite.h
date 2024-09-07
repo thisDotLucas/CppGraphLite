@@ -5,6 +5,10 @@
 #include <map>
 #include <set>
 #include <type_traits>
+#include <optional>
+#include <tuple>
+#include <ranges>
+#include <algorithm>
 
 namespace graphlite
 {
@@ -14,7 +18,7 @@ namespace graphlite
 		Undirected
 	};
 
-	template <typename VertexType, EdgeType edgeType>
+	template <typename VertexType, EdgeType edgeType = EdgeType::Directed, typename EdgeData = std::nullopt_t>
 	class Graph
 	{
 	public:
@@ -30,6 +34,11 @@ namespace graphlite
 			std::unordered_map<VertexType, size_t>,
 			std::map<VertexType, size_t>>;
 
+		using EdgeDataStructureType = std::conditional_t<std::same_as<EdgeData, std::nullopt_t>, std::tuple<>, 
+			std::conditional_t<details::Hashable<VertexType>,
+			std::unordered_map<std::pair<VertexType, VertexType>, EdgeData>,
+			std::map<std::pair<VertexType, VertexType>, EdgeType>>>;
+
 		template <typename _VertexType> // Universal/forwarding reference
 		void insert(_VertexType&& vertex)
 		{
@@ -43,6 +52,7 @@ namespace graphlite
 		}
 
 		template <typename _VertexType>
+		requires (std::same_as<EdgeData, std::nullopt_t>)
 		void insert(_VertexType&& from, _VertexType&& to)
 		{
 			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
@@ -58,6 +68,25 @@ namespace graphlite
 			}
 		}
 
+		template <typename _VertexType, typename _EdgeData>
+		requires (!std::same_as<EdgeData, std::nullopt_t>)
+		void insert(_VertexType&& from, _VertexType&& to, _EdgeData&& edgeData)
+		{
+			static_assert(details::is_equivalent_v<_VertexType, VertexType>
+				&& details::is_equivalent_v<_EdgeData, EdgeData>);
+
+			if constexpr (edgeType == EdgeType::Directed)
+			{
+				_insert(std::forward<_VertexType>(from), std::forward<_VertexType>(to), std::forward<_EdgeData>(edgeData));
+			}
+			else
+			{
+				_insert(from, to, edgeData);
+				_insert(std::forward<_VertexType>(to), std::forward<_VertexType>(from), std::forward<_EdgeData>(edgeData));
+			}
+		}
+
+
 		template <typename _VertexType>
 		void erase(_VertexType&& vertex)
 		{
@@ -72,13 +101,22 @@ namespace graphlite
 					m_outDegree[vertex]--;
 			}
 
+			if constexpr (!std::same_as<EdgeData, std::nullopt_t>)
+			{
+				std::erase_if(m_edgeData, [&](const auto& edgeData)
+				{
+					const auto& [from, to] = edgeData.first;
+					return from == vertex || to == vertex;
+				});
+			}
+
 			m_inDegree.erase(vertex);
 			m_outDegree.erase(vertex);
 			m_adjacencyList.erase(std::forward<_VertexType>(vertex));
 		}
 
 		template <typename _VertexType>
-		[[nodiscard]] EdgeListType edges(_VertexType&& vertex) const const&
+		[[nodiscard]] EdgeListType edges(_VertexType&& vertex) const&
 		{
 			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
 
@@ -105,6 +143,30 @@ namespace graphlite
 			{
 				return EdgeListType{};
 			}
+		}
+
+		template <typename _VertexType>
+		requires (!std::same_as<EdgeData, std::nullopt_t>)
+		[[nodiscard]] std::optional<EdgeData> edgeData(_VertexType&& from, _VertexType&& to) const&
+		{
+			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+
+			if (m_edgeData.contains({ from, to }))
+				return m_edgeData[{ std::forward<_VertexType>(from), std::forward<_VertexType>(to) }];
+			else
+				return std::nullopt;
+		}
+
+		template <typename _VertexType>
+		requires (!std::same_as<EdgeData, std::nullopt_t>)
+		[[nodiscard]] std::optional<EdgeData> edgeData(_VertexType&& from, _VertexType&& to) &&
+		{
+			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+
+			if (m_edgeData.contains({ from, to }))
+				return std::move(m_edgeData[{ std::forward<_VertexType>(from), std::forward<_VertexType>(to) }]);
+			else
+				return std::nullopt;
 		}
 
 		[[nodiscard]] size_t size() const
@@ -163,9 +225,20 @@ namespace graphlite
 			}
 		}
 
+		template <typename _VertexType, typename _EdgeData>
+		void _insert(_VertexType&& from, _VertexType&& to, _EdgeData&& edgeData)
+		{
+			static_assert(details::is_equivalent_v<_VertexType, VertexType>
+				&& details::is_equivalent_v<_EdgeData, EdgeData>);
+
+			_insert(from, to);
+			m_edgeData[{ std::forward<_VertexType>(from), std::forward<_VertexType>(to) }] = std::forward<_EdgeData>(edgeData);
+		}
+
 		AdjacencyListType m_adjacencyList;
 		DegreeStructureType m_inDegree;
 		DegreeStructureType m_outDegree;
+		EdgeDataStructureType m_edgeData;
 	};
 
 	static_assert(std::same_as<Graph<int, EdgeType::Directed>::AdjacencyListType,
