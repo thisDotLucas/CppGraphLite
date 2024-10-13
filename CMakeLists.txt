@@ -7,14 +7,13 @@ add_subdirectory (test)
 enable_testing()
 add_test (NAME CppGraphLiteTest COMMAND Test)
 
-add_library(${PROJECT_NAME} STATIC)
+add_library(CppGraphLite STATIC)
 
-target_sources(${PROJECT_NAME}
-    PRIVATE
-        "src/CppGraphLite.cpp"
-        "include/CppGraphLiteTypeTraits.h")
+target_sources(CppGraphLite PRIVATE
+	"src/CppGraphLite.cpp"
+	"include/CppGraphLiteTypeTraits.h")
 
-target_include_directories(${PROJECT_NAME}
+target_include_directories(CppGraphLite
     PRIVATE
         # where the library itself will look for its internal headers
         ${CMAKE_CURRENT_SOURCE_DIR}/src

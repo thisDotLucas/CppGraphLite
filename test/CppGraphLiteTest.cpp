@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "CppGraphLite.h"
+#include "../include/CppGraphLite.h"
 
 using namespace graphlite;
 
