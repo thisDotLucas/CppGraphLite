@@ -97,7 +97,7 @@ namespace graphlite
 
 			for (auto& [vertex, edges] : m_adjacencyList)
 			{
-				if (edges.erase(vertex) != std::end(edges))
+				if (edges.erase(vertex) != 0)
 					m_outDegree[vertex]--;
 			}
 
