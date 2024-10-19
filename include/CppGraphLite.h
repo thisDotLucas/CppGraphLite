@@ -122,7 +122,7 @@ namespace graphlite
 
 			if (m_adjacencyList.contains(vertex))
 			{
-				return m_adjacencyList[std::forward<_VertexType>(vertex)];
+				return m_adjacencyList.at(std::forward<_VertexType>(vertex));
 			}
 			else
 			{
@@ -152,7 +152,7 @@ namespace graphlite
 			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
 
 			if (m_edgeData.contains({ from, to }))
-				return m_edgeData[{ std::forward<_VertexType>(from), std::forward<_VertexType>(to) }];
+				return m_edgeData.at({ std::forward<_VertexType>(from), std::forward<_VertexType>(to) });
 			else
 				return std::nullopt;
 		}
