@@ -35,9 +35,9 @@ namespace graphlite
 			std::map<VertexType, size_t>>;
 
 		using EdgeDataStructureType = std::conditional_t<std::same_as<EdgeData, std::nullopt_t>, std::tuple<>, 
-			std::conditional_t<details::Hashable<VertexType>,
+			std::conditional_t<details::Hashable<std::pair<VertexType, VertexType>>,
 			std::unordered_map<std::pair<VertexType, VertexType>, EdgeData>,
-			std::map<std::pair<VertexType, VertexType>, EdgeType>>>;
+			std::map<std::pair<VertexType, VertexType>, EdgeData>>>;
 
 		template <typename _VertexType> // Universal/forwarding reference
 		void insert(_VertexType&& vertex)
