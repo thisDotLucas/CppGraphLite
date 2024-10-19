@@ -45,3 +45,31 @@ TEST(CppGraphLiteTest, SimpleUnDirectedGraph)
 	EXPECT_TRUE(graph.outDegree(4) == 1);
 }
 
+TEST(CppGraphLiteTest, SimpleUnDirectedGraphErase) 
+{
+	Graph<int, EdgeType::Undirected> graph;
+	graph.insert(2, 4);
+	graph.erase(2);
+
+	EXPECT_TRUE(graph.inDegree(2) == 0);
+	EXPECT_TRUE(graph.inDegree(4) == 0);
+	EXPECT_TRUE(graph.outDegree(2) == 0);
+	EXPECT_TRUE(graph.outDegree(4) == 0);
+	EXPECT_TRUE(graph.edges(2).empty());
+	EXPECT_TRUE(graph.edges(4).empty());
+}
+
+TEST(CppGraphLiteTest, SimpleDirectedGraphErase) 
+{
+	Graph<int, EdgeType::Directed> graph;
+	graph.insert(2, 4);
+	graph.erase(2);
+
+	EXPECT_TRUE(graph.inDegree(2) == 0);
+	EXPECT_TRUE(graph.inDegree(4) == 0);
+	EXPECT_TRUE(graph.outDegree(2) == 0);
+	EXPECT_TRUE(graph.outDegree(4) == 0);
+	EXPECT_TRUE(graph.edges(2).empty());
+	EXPECT_TRUE(graph.edges(4).empty());
+}
+

@@ -95,10 +95,12 @@ namespace graphlite
 			if (!m_adjacencyList.contains(vertex))
 				return;
 
-			for (auto& [vertex, edges] : m_adjacencyList)
+			for (auto& [_vertex, edges] : m_adjacencyList)
 			{
 				if (edges.erase(vertex) != 0)
-					m_outDegree[vertex]--;
+				{
+					m_outDegree[_vertex]--;
+				}
 			}
 
 			if constexpr (!std::same_as<EdgeData, std::nullopt_t>)
@@ -112,6 +114,12 @@ namespace graphlite
 
 			m_inDegree.erase(vertex);
 			m_outDegree.erase(vertex);
+
+			for (auto& _vertex : m_adjacencyList[vertex])
+			{
+				m_inDegree[_vertex]--;
+			}
+
 			m_adjacencyList.erase(std::forward<_VertexType>(vertex));
 		}
 
