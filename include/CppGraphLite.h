@@ -9,6 +9,7 @@
 #include <tuple>
 #include <ranges>
 #include <algorithm>
+#include <queue>
 
 namespace graphlite
 {
@@ -18,10 +19,12 @@ namespace graphlite
 		Undirected
 	};
 
-	template <typename VertexType, EdgeType edgeType = EdgeType::Directed, typename EdgeData = std::nullopt_t>
+	template <typename _VertexType, EdgeType edgeType = EdgeType::Directed, typename EdgeData = std::nullopt_t>
 	class Graph
 	{
 	public:
+		using VertexType = _VertexType;
+
 		using EdgeListType = std::conditional_t<details::Hashable<VertexType>,
 			std::unordered_set<VertexType>,
 			std::set<VertexType>>;
@@ -257,5 +260,44 @@ namespace graphlite
 
 	static_assert(std::same_as<Graph<int, EdgeType::Directed>::DegreeStructureType,
 		std::unordered_map<int, size_t>>);
+}
+
+namespace graphlite::algorithm
+{
+	template<typename Graph>
+	class GraphLiteBFS
+	{		
+		using VisitedType = std::conditional_t<details::Hashable<typename Graph::VertexType>,
+			std::unordered_set<typename Graph::VertexType>,
+			std::set<typename Graph::VertexType>>;
+
+	public:
+		using ProcessFunction = std::function<bool(const std::optional<typename Graph::VertexType>, const typename Graph::VertexType&)>;
+		void BFS(const Graph& graph, const typename Graph::VertexType& start, ProcessFunction processFunction)
+		{
+			VisitedType visited{ start };
+
+			std::queue<typename Graph::VertexType> toProcess;
+			toProcess.push(start);
+
+			bool stop = processFunction(std::nullopt, start);
+
+			while (!stop && toProcess.size())
+			{
+				auto vertex = toProcess.front();
+
+				auto isUnprocessed = [&](const typename Graph::VertexType& vertex) { return !visited.contains(vertex); };
+				for (const auto& connectedVertex : graph.getEdgesForVertex(vertex)
+					| std::views::filter(isUnprocessed))
+				{
+					visited.insert(connectedVertex);
+					toProcess.push(connectedVertex);
+					stop = process(vertex, connectedVertex);
+				}
+
+				toProcess.pop();
+			}
+		}
+	};
 }
 
