@@ -299,5 +299,39 @@ namespace graphlite::algorithm
 			}
 		}
 	};
+
+	template<typename Graph>
+	class GraphLiteDFS
+	{		
+		using VisitedType = std::conditional_t<details::Hashable<typename Graph::VertexType>,
+			std::unordered_set<typename Graph::VertexType>,
+			std::set<typename Graph::VertexType>>;
+
+	public:
+		using ProcessFunction = std::function<bool(const std::optional<typename Graph::VertexType>, const typename Graph::VertexType&)>;
+		void DFS(const Graph& graph, const typename Graph::VertexType& vertex, ProcessFunction processFunction)
+		{
+			m_processing.insert(vertex);
+
+			for (auto&& connectedVertex : graph.edges(vertex))
+			{
+				if (!m_stop)
+					break;
+
+				if (!m_processing.contains(connectedVertex) && !m_processed.contains(connectedVertex))
+				{
+					m_stop = processFunction(vertex, connectedVertex);
+					DFS(graph, connectedVertex, processFunction);
+				}
+			}
+
+			m_processing.erase(vertex);
+			m_processed.insert(vertex);
+		}
+
+		bool m_stop{ false };
+		std::unordered_set<typename Graph::VertexType> m_processing;
+		std::unordered_set<typename Graph::VertexType> m_processed;
+	};
 }
 
