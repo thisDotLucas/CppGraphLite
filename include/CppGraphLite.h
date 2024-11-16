@@ -315,7 +315,7 @@ namespace graphlite::algorithm
 
 			for (auto&& connectedVertex : graph.edges(vertex))
 			{
-				if (!m_stop)
+				if (m_stop)
 					break;
 
 				if (!m_processing.contains(connectedVertex) && !m_processed.contains(connectedVertex))
