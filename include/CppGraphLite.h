@@ -287,12 +287,12 @@ namespace graphlite::algorithm
 				auto vertex = toProcess.front();
 
 				auto isUnprocessed = [&](const typename Graph::VertexType& vertex) { return !visited.contains(vertex); };
-				for (const auto& connectedVertex : graph.getEdgesForVertex(vertex)
+				for (auto&& connectedVertex : graph.edges(vertex)
 					| std::views::filter(isUnprocessed))
 				{
 					visited.insert(connectedVertex);
 					toProcess.push(connectedVertex);
-					stop = process(vertex, connectedVertex);
+					stop = processFunction(vertex, connectedVertex);
 				}
 
 				toProcess.pop();
