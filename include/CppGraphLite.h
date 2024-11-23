@@ -24,6 +24,7 @@ namespace graphlite
 	{
 	public:
 		using VertexType = _VertexType;
+		using EdgeDataType = EdgeData;
 
 		using EdgeListType = std::conditional_t<details::Hashable<VertexType>,
 			std::unordered_set<VertexType>,
@@ -329,9 +330,89 @@ namespace graphlite::algorithm
 			m_processed.insert(vertex);
 		}
 
+	private:
 		bool m_stop{ false };
 		std::unordered_set<typename Graph::VertexType> m_processing;
 		std::unordered_set<typename Graph::VertexType> m_processed;
+	};
+
+	template<typename Graph>
+	class GraphLiteDijkstra
+	{
+		using VisitedType = std::conditional_t<std::is_integral_v<typename Graph::VertexType>,
+			std::unordered_set<typename Graph::VertexType>,
+			std::set<typename Graph::VertexType>>;
+
+		using PriorityQueueType = std::priority_queue<
+			std::pair<typename Graph::VertexType, typename Graph::EdgeDataType>,
+			std::vector<std::pair<typename Graph::VertexType, typename Graph::EdgeDataType>>,
+			std::greater<>>;
+
+	public:
+		using ProcessFunction = std::function<bool(const typename Graph::VertexType&)>;
+
+		std::vector<typename Graph::EdgeDataType> Dijkstra(const Graph& graph, const typename Graph::VertexType& start, ProcessFunction processFunction)
+		{
+			std::vector<typename Graph::EdgeDataType> distances(graph.size(), std::numeric_limits<typename Graph::EdgeDataType>::max());
+			distances[start] = typename Graph::EdgeDataType{};
+
+			m_vertexSet.clear();
+			m_edgesCrossingSet = PriorityQueueType{};
+
+			m_edgesCrossingSet.push(start, typename Graph::EdgeDataType{});
+
+			std::vector<std::optional<typename Graph::VertexType>> predecessors(graph.size(), std::nullopt);
+
+			while (!m_edgesCrossingSet.empty())
+			{
+				auto [currentVertex, currentDistance] = m_edgesCrossingSet.top();
+				m_edgesCrossingSet.pop();
+
+				if (m_vertexSet.contains(currentVertex))
+					continue;
+
+				m_vertexSet.insert(currentVertex);
+
+				if (processFunction(currentVertex))
+					break;
+
+				for (const auto& toVertex : graph.edges(currentVertex))
+				{
+					auto edgeWeight = graph.edgeData(currentVertex, toVertex);
+					auto newDistance = currentDistance + edgeWeight;
+
+					if (newDistance < distances[toVertex])
+					{
+						distances[toVertex] = newDistance;
+						m_predecessors[toVertex] = currentVertex;
+						m_edgesCrossingSet.push(toVertex, newDistance);
+					}
+				}
+			}
+
+			return distances;
+		}
+
+		std::vector<typename Graph::VertexType> getPath(const typename Graph::VertexType& to) const
+		{
+			std::vector<typename Graph::VertexType> path;
+
+			std::optional<typename Graph::VertexType> current = to;
+			while (current.has_value())
+			{
+				path.push_back(current.value());
+				current = m_predecessors[current.value()];
+			}
+
+			std::reverse(std::begin(path), std::end(path));
+
+			return path;
+		}
+
+	private:
+		VisitedType m_vertexSet;
+		PriorityQueueType m_edgesCrossingSet;
+		std::vector<std::optional<typename Graph::VertexType>> m_predecessors;
 	};
 }
 
