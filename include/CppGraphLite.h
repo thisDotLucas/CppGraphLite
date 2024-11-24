@@ -127,6 +127,12 @@ namespace graphlite
 			m_adjacencyList.erase(std::forward<_VertexType>(vertex));
 		}
 
+		[[nodiscard]] std::vector<VertexType> vertices() const
+		{
+			auto keys = std::views::keys(m_adjacencyList);
+			return { std::begin(keys), std::end(keys) };
+		}
+
 		template <typename _VertexType>
 		[[nodiscard]] EdgeListType edges(_VertexType&& vertex) const&
 		{
@@ -339,33 +345,44 @@ namespace graphlite::algorithm
 	template<typename Graph>
 	class GraphLiteDijkstra
 	{
-		using VisitedType = std::conditional_t<std::is_integral_v<typename Graph::VertexType>,
+	public:
+		using ProcessFunction = std::function<bool(const typename Graph::VertexType&)>;
+		using WeightRetrieverFunction = std::function<int(const typename Graph::EdgeDataType&)>;
+
+		using VisitedType = std::conditional_t<details::Hashable<typename Graph::VertexType>,
 			std::unordered_set<typename Graph::VertexType>,
 			std::set<typename Graph::VertexType>>;
 
+		using DistanceMapType = std::conditional_t<details::Hashable<typename Graph::VertexType>,
+			std::unordered_map<typename Graph::VertexType, int>,
+			std::map<typename Graph::VertexType, int>>;
+
+		using PredecessorMapType = std::conditional_t<details::Hashable<typename Graph::VertexType>,
+			std::unordered_map<typename Graph::VertexType, std::optional<typename Graph::VertexType>>,
+			std::map<typename Graph::VertexType, std::optional<typename Graph::VertexType>>>;
+
 		using PriorityQueueType = std::priority_queue<
-			std::pair<typename Graph::VertexType, typename Graph::EdgeDataType>,
-			std::vector<std::pair<typename Graph::VertexType, typename Graph::EdgeDataType>>,
-			std::greater<>>;
+			std::pair<typename Graph::VertexType, int>,
+			std::vector<std::pair<typename Graph::VertexType, int>>,
+			std::function<bool(const std::pair<typename Graph::VertexType, int>&, const std::pair<typename Graph::VertexType, int>&)>>;
 
-	public:
-		using ProcessFunction = std::function<bool(const typename Graph::VertexType&)>;
-
-		std::vector<typename Graph::EdgeDataType> Dijkstra(const Graph& graph, const typename Graph::VertexType& start, ProcessFunction processFunction)
+		DistanceMapType Dijkstra(const Graph& graph, const typename Graph::VertexType& start, ProcessFunction processFunction, WeightRetrieverFunction getWeight = [](const typename Graph::EdgeDataType& edge) { return edge; })
 		{
-			std::vector<typename Graph::EdgeDataType> distances(graph.size(), std::numeric_limits<typename Graph::EdgeDataType>::max());
-			distances[start] = typename Graph::EdgeDataType{};
+			DistanceMapType distances{};
+			for (const auto& vertex : graph.vertices()) 
+			{
+				distances[vertex] = std::numeric_limits<int>::max();
+				m_predecessors[vertex] = std::nullopt;
+			}
 
 			m_vertexSet.clear();
-			m_edgesCrossingSet = PriorityQueueType{};
+			m_edgesCrossingSet = PriorityQueueType([&](const std::pair<typename Graph::VertexType, int>& l, const std::pair<typename Graph::VertexType, int>& r) { return l.second > r.second; });
 
-			m_edgesCrossingSet.push(start, typename Graph::EdgeDataType{});
-
-			std::vector<std::optional<typename Graph::VertexType>> predecessors(graph.size(), std::nullopt);
+			m_edgesCrossingSet.emplace(start, int{});
 
 			while (!m_edgesCrossingSet.empty())
 			{
-				auto [currentVertex, currentDistance] = m_edgesCrossingSet.top();
+				const auto [currentVertex, currentDistance] = m_edgesCrossingSet.top();
 				m_edgesCrossingSet.pop();
 
 				if (m_vertexSet.contains(currentVertex))
@@ -376,16 +393,16 @@ namespace graphlite::algorithm
 				if (processFunction(currentVertex))
 					break;
 
-				for (const auto& toVertex : graph.edges(currentVertex))
+				for (auto&& toVertex : graph.edges(currentVertex))
 				{
-					auto edgeWeight = graph.edgeData(currentVertex, toVertex);
-					auto newDistance = currentDistance + edgeWeight;
+					auto edge = graph.edgeData(currentVertex, toVertex);
+					auto newDistance = currentDistance + getWeight(edge.value());
 
 					if (newDistance < distances[toVertex])
 					{
 						distances[toVertex] = newDistance;
 						m_predecessors[toVertex] = currentVertex;
-						m_edgesCrossingSet.push(toVertex, newDistance);
+						m_edgesCrossingSet.emplace(toVertex, newDistance);
 					}
 				}
 			}
@@ -401,7 +418,7 @@ namespace graphlite::algorithm
 			while (current.has_value())
 			{
 				path.push_back(current.value());
-				current = m_predecessors[current.value()];
+				current = m_predecessors.at(current.value());
 			}
 
 			std::reverse(std::begin(path), std::end(path));
@@ -412,7 +429,7 @@ namespace graphlite::algorithm
 	private:
 		VisitedType m_vertexSet;
 		PriorityQueueType m_edgesCrossingSet;
-		std::vector<std::optional<typename Graph::VertexType>> m_predecessors;
+		PredecessorMapType m_predecessors;
 	};
 }
 
