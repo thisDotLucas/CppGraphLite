@@ -342,43 +342,44 @@ namespace graphlite::algorithm
 		std::unordered_set<typename Graph::VertexType> m_processed;
 	};
 
-	template<typename Graph>
+	template<typename Graph, typename WeightRetrieverFunction = std::function<typename Graph::EdgeDataType(const typename Graph::EdgeDataType&)>>
 	class GraphLiteDijkstra
 	{
 	public:
 		using ProcessFunction = std::function<bool(const typename Graph::VertexType&)>;
-		using WeightRetrieverFunction = std::function<int(const typename Graph::EdgeDataType&)>;
 
 		using VisitedType = std::conditional_t<details::Hashable<typename Graph::VertexType>,
 			std::unordered_set<typename Graph::VertexType>,
 			std::set<typename Graph::VertexType>>;
 
+		using WeightType = std::invoke_result_t<WeightRetrieverFunction, typename Graph::EdgeDataType>;
+
 		using DistanceMapType = std::conditional_t<details::Hashable<typename Graph::VertexType>,
-			std::unordered_map<typename Graph::VertexType, int>,
-			std::map<typename Graph::VertexType, int>>;
+			std::unordered_map<typename Graph::VertexType, WeightType>,
+			std::map<typename Graph::VertexType, WeightType>>;
 
 		using PredecessorMapType = std::conditional_t<details::Hashable<typename Graph::VertexType>,
 			std::unordered_map<typename Graph::VertexType, std::optional<typename Graph::VertexType>>,
 			std::map<typename Graph::VertexType, std::optional<typename Graph::VertexType>>>;
 
 		using PriorityQueueType = std::priority_queue<
-			std::pair<typename Graph::VertexType, int>,
-			std::vector<std::pair<typename Graph::VertexType, int>>,
-			std::function<bool(const std::pair<typename Graph::VertexType, int>&, const std::pair<typename Graph::VertexType, int>&)>>;
+			std::pair<typename Graph::VertexType, WeightType>,
+			std::vector<std::pair<typename Graph::VertexType, WeightType>>,
+			std::function<bool(const std::pair<typename Graph::VertexType, WeightType>&, const std::pair<typename Graph::VertexType, WeightType>&)>>;
 
 		DistanceMapType Dijkstra(const Graph& graph, const typename Graph::VertexType& start, ProcessFunction processFunction, WeightRetrieverFunction getWeight = [](const typename Graph::EdgeDataType& edge) { return edge; })
 		{
 			DistanceMapType distances{};
 			for (const auto& vertex : graph.vertices()) 
 			{
-				distances[vertex] = std::numeric_limits<int>::max();
+				distances[vertex] = std::numeric_limits<WeightType>::max();
 				m_predecessors[vertex] = std::nullopt;
 			}
 
 			m_vertexSet.clear();
-			m_edgesCrossingSet = PriorityQueueType([&](const std::pair<typename Graph::VertexType, int>& l, const std::pair<typename Graph::VertexType, int>& r) { return l.second > r.second; });
+			m_edgesCrossingSet = PriorityQueueType([&](const auto& l, const auto& r) { return l.second > r.second; });
 
-			m_edgesCrossingSet.emplace(start, int{});
+			m_edgesCrossingSet.emplace(start, WeightType{});
 
 			while (!m_edgesCrossingSet.empty())
 			{
