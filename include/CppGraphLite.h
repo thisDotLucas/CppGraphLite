@@ -46,7 +46,7 @@ namespace graphlite
 		template <typename _VertexType> // Universal/forwarding reference
 		void insert(_VertexType&& vertex)
 		{
-			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+			static_assert(details::is_compatible_v<_VertexType, VertexType>);
 
 			if (m_adjacencyList.insert({ vertex, {} }).second)
 			{
@@ -59,7 +59,7 @@ namespace graphlite
 		requires (std::same_as<EdgeData, std::nullopt_t>)
 		void insert(_VertexType&& from, _VertexType&& to)
 		{
-			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+			static_assert(details::is_compatible_v<_VertexType, VertexType>);
 
 			if constexpr (edgeType == EdgeType::Directed)
 			{
@@ -76,8 +76,8 @@ namespace graphlite
 		requires (!std::same_as<EdgeData, std::nullopt_t>)
 		void insert(_VertexType&& from, _VertexType&& to, _EdgeData&& edgeData)
 		{
-			static_assert(details::is_equivalent_v<_VertexType, VertexType>
-				&& details::is_equivalent_v<_EdgeData, EdgeData>);
+			static_assert(details::is_compatible_v<_VertexType, VertexType>
+				&& details::is_compatible_v<_EdgeData, EdgeData>);
 
 			if constexpr (edgeType == EdgeType::Directed)
 			{
@@ -94,7 +94,7 @@ namespace graphlite
 		template <typename _VertexType>
 		void erase(_VertexType&& vertex)
 		{
-			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+			static_assert(details::is_compatible_v<_VertexType, VertexType>);
 
 			if (!m_adjacencyList.contains(vertex))
 				return;
@@ -136,7 +136,7 @@ namespace graphlite
 		template <typename _VertexType>
 		[[nodiscard]] EdgeListType edges(_VertexType&& vertex) const&
 		{
-			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+			static_assert(details::is_compatible_v<_VertexType, VertexType>);
 
 			if (m_adjacencyList.contains(vertex))
 			{
@@ -151,7 +151,7 @@ namespace graphlite
 		template <typename _VertexType>
 		[[nodiscard]] EdgeListType&& edges(_VertexType&& vertex) &&
 		{
-			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+			static_assert(details::is_compatible_v<_VertexType, VertexType>);
 
 			if (m_adjacencyList.contains(vertex))
 			{
@@ -167,7 +167,7 @@ namespace graphlite
 		requires (!std::same_as<EdgeData, std::nullopt_t>)
 		[[nodiscard]] std::optional<EdgeData> edgeData(_VertexType&& from, _VertexType&& to) const&
 		{
-			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+			static_assert(details::is_compatible_v<_VertexType, VertexType>);
 
 			if (m_edgeData.contains({ from, to }))
 				return m_edgeData.at({ std::forward<_VertexType>(from), std::forward<_VertexType>(to) });
@@ -179,7 +179,7 @@ namespace graphlite
 		requires (!std::same_as<EdgeData, std::nullopt_t>)
 		[[nodiscard]] std::optional<EdgeData> edgeData(_VertexType&& from, _VertexType&& to) &&
 		{
-			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+			static_assert(details::is_compatible_v<_VertexType, VertexType>);
 
 			if (m_edgeData.contains({ from, to }))
 				return std::move(m_edgeData[{ std::forward<_VertexType>(from), std::forward<_VertexType>(to) }]);
@@ -195,7 +195,7 @@ namespace graphlite
 		template <typename _VertexType>
 		[[nodiscard]] size_t inDegree(_VertexType&& vertex)
 		{
-			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+			static_assert(details::is_compatible_v<_VertexType, VertexType>);
 
 			return m_inDegree[std::forward<_VertexType>(vertex)];
 		}
@@ -203,7 +203,7 @@ namespace graphlite
 		template <typename _VertexType>
 		[[nodiscard]] size_t outDegree(_VertexType&& vertex)
 		{
-			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+			static_assert(details::is_compatible_v<_VertexType, VertexType>);
 
 			return m_outDegree[std::forward<_VertexType>(vertex)];
 		}
@@ -212,7 +212,7 @@ namespace graphlite
 		template <typename _VertexType>
 		void _insert(_VertexType&& from, _VertexType&& to)
 		{
-			static_assert(details::is_equivalent_v<_VertexType, VertexType>);
+			static_assert(details::is_compatible_v<_VertexType, VertexType>);
 
 			if (!m_adjacencyList.contains(to))
 			{
@@ -246,8 +246,8 @@ namespace graphlite
 		template <typename _VertexType, typename _EdgeData>
 		void _insert(_VertexType&& from, _VertexType&& to, _EdgeData&& edgeData)
 		{
-			static_assert(details::is_equivalent_v<_VertexType, VertexType>
-				&& details::is_equivalent_v<_EdgeData, EdgeData>);
+			static_assert(details::is_compatible_v<_VertexType, VertexType>
+				&& details::is_compatible_v<_EdgeData, EdgeData>);
 
 			_insert(from, to);
 			m_edgeData[{ std::forward<_VertexType>(from), std::forward<_VertexType>(to) }] = std::forward<_EdgeData>(edgeData);
@@ -320,10 +320,19 @@ namespace graphlite::algorithm
 		{
 			m_processing.insert(vertex);
 
+			if (m_first)
+			{
+				m_stop = processFunction(std::nullopt, vertex);
+				m_first = false;
+			}
+
 			for (auto&& connectedVertex : graph.edges(vertex))
 			{
 				if (m_stop)
+				{
+					m_first = true;
 					break;
+				}
 
 				if (!m_processing.contains(connectedVertex) && !m_processed.contains(connectedVertex))
 				{
@@ -334,9 +343,13 @@ namespace graphlite::algorithm
 
 			m_processing.erase(vertex);
 			m_processed.insert(vertex);
+
+			if (m_processed.size() == graph.size())
+				m_first = true;
 		}
 
 	private:
+		bool m_first{ true };
 		bool m_stop{ false };
 		std::unordered_set<typename Graph::VertexType> m_processing;
 		std::unordered_set<typename Graph::VertexType> m_processed;
@@ -375,6 +388,8 @@ namespace graphlite::algorithm
 				distances[vertex] = std::numeric_limits<WeightType>::max();
 				m_predecessors[vertex] = std::nullopt;
 			}
+
+			distances[start] = WeightType{};
 
 			m_vertexSet.clear();
 			m_edgesCrossingSet = PriorityQueueType([&](const auto& l, const auto& r) { return l.second > r.second; });

@@ -13,4 +13,7 @@ namespace details
 
 	template <typename T, typename U>
 	constexpr bool is_equivalent_v = is_equivalent<T, U>::value;
+
+	template <typename T, typename U>
+	constexpr bool is_compatible_v = is_equivalent<T, U>::value || std::constructible_from<U, T>;
 }
