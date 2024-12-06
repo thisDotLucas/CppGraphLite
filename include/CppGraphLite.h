@@ -10,6 +10,7 @@
 #include <ranges>
 #include <algorithm>
 #include <queue>
+#include <functional>
 
 namespace graphlite
 {
